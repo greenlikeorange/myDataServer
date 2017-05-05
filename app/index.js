@@ -15,15 +15,29 @@ mongoose.connect('localhost/myData')
 mongoose.Promise = global.Promise;
 
 const Schema = mongoose.Schema;
-const MyDataSchema = new Schema({
-  collectionName: { type: String, required: true },
-  data: { type: Schema.Types.Mixed }
+const MyGeoDataSchema = new Schema({
+  _loc: {
+    type: { type: String, default: 'Point'}
+    coordinates: [Number]
+  },
+  coords: {
+    latitude: Number,
+    longitude: Number,
+    accuracy: Number,
+    altitude: Number,
+    heading: Number,
+    speed: Number,
+  },
+  mocked: Boolean,
+  timestamp: Date
 }, {
   strict: true,
   timestamps: true
 })
 
-const MyData = mongoose.model('MyData', MyDataSchema);
+MyGeoDataSchema.index({_loc: '2dsphere'});
+
+const MyGeoData = mongoose.model('MyGeoData', MyGeoDataSchema);
 
 router.post('/insert/geodata', async function (ctx, next) {
   let records = ctx.request.body.data;
@@ -36,13 +50,11 @@ router.post('/insert/geodata', async function (ctx, next) {
   }
 
   records = records.map((record) => {
-    return {
-      collectionName: "geodata",
-      data: record
-    }
+    record._loc = [record.latitude, record.longitude];
+    return record;
   })
 
-  let insert = await MyData.create(records);
+  let insert = await MyGeoData.create(records);
   ctx.body = { success: true, createdCount: records.length }
 })
 
