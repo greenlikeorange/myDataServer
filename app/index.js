@@ -17,7 +17,7 @@ mongoose.Promise = global.Promise;
 const Schema = mongoose.Schema;
 const MyGeoDataSchema = new Schema({
   _loc: {
-    type: { type: String, default: 'Point'}
+    type: { type: String, default: 'Point'},
     coordinates: [Number]
   },
   coords: {
