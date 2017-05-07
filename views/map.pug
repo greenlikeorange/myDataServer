@@ -102,10 +102,12 @@ html
                   generateLine(mPath.slice(-50), '#00BCD4', true, isMoreThan5Min ? 'CIRCLE': 'FORWARD_CLOSED_ARROW')
                 );
                 
+                if (stopMaker) stopMaker.setMap(null);
+                
                 if (isMoreThan5Min) {
                   stopMaker = new google.maps.Marker({
                     position: latlng,
-                    label: Math.floor(diff/(60*1000)) + ' mins',
+                    label: Math.floor(diff/(60*1000)) + 'm',
                     map: map
                   });
                 }
