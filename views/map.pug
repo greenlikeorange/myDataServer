@@ -26,8 +26,10 @@ html
       let mPath;
       let polyline;
       let mPolyline;
+      let stopMaker;
       const range = !{JSON.stringify(range)};
-      const speed = #{speed}
+      const speed = #{speed};
+      const skipStops = #{skipStops ? 'true': 'false'};
       
       const rangeInTime = range.map((date) => moment(date).toDate().getTime())
       
@@ -84,13 +86,14 @@ html
               
               setTimeout(() => {
                 const latlng = {lat: path.coords.latitude, lng: path.coords.longitude};
-                const isMoreThan5Min = timeDiff[i+1] > (5*60*1000);
-                const isMoreThan30Min = timeDiff[i+1] > (30*60*1000);
-                
                 map.panTo(latlng);
                 mPath.push(latlng);
+                
                 polyline.setMap(null);
                 mPolyline.setMap(null);
+                
+                const isMoreThan5Min = timeDiff[i+1] > (5*60*1000);
+                const isMoreThan30Min = timeDiff[i+1] > (30*60*1000);
 
                 polyline = new google.maps.Polyline(
                   generateLine(mPath.slice(0, -50))
@@ -98,6 +101,14 @@ html
                 mPolyline = new google.maps.Polyline(
                   generateLine(mPath.slice(-50), '#00BCD4', true, isMoreThan5Min ? 'CIRCLE': 'FORWARD_CLOSED_ARROW')
                 );
+                
+                if (isMoreThan5Min) {
+                  stopMaker = new google.maps.Marker({
+                    position: latlng,
+                    label: Math.floor(diff/(60*1000)) + ' mins',
+                    map: map
+                  });
+                }
 
                 polyline.setMap(map);
                 mPolyline.setMap(map);

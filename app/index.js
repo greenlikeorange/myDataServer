@@ -49,12 +49,13 @@ router.get('/show', async (ctx, next) => {
   }
 
   var speed = ctx.request.query.speed || 5;
+  var skipStops = !!ctx.request.query.skipstops;
   var date = moment().subtract(ctx.request.query.day || 0, 'days')
 
   ctx.render('map', { range: [
     date.clone().startOf('day').toDate().getTime(),
     date.clone().endOf('day').toDate().getTime()
-  ], speed: speed });
+  ], speed: speed, skipStops: skipStops });
 })
 
 router.get('/get/geodata', async (ctx, next) => {
