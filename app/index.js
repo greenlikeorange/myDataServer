@@ -1,17 +1,19 @@
 'use strict';
 
-const config = require('config')
-const debug = require('debug')('_HC:app')
-const http = require('http')
-const koa = require('koa')
+const config = require('config');
+const debug = require('debug')('_HC:app');
+const http = require('http');
+const koa = require('koa');
 const koaBody = require('koa-body');
 const Router = require('koa-router');
-const app = new koa()
+const moment = require('moment');
+const Pug = require('koa-pug');
+const app = new koa();
 
-const router = new Router()
+const router = new Router();
 
 const mongoose = require('mongoose');
-mongoose.connect('localhost/myData')
+mongoose.connect('localhost/myData');
 mongoose.Promise = global.Promise;
 
 const Schema = mongoose.Schema;
@@ -39,9 +41,65 @@ MyGeoDataSchema.index({_loc: '2dsphere'});
 
 const MyGeoData = mongoose.model('MyGeoData', MyGeoDataSchema);
 
-router.post('/insert/geodata', async function (ctx, next) {
+router.get('/show', async (ctx, next) => {
+  if (ctx.request.query.access_token !== 'my_S3cr37') {
+    const err = new Error('Not authorized')
+    err.status = 401
+    throw err;
+  }
+
+  var speed = ctx.request.query.speed || 5;
+  var date = moment().subtract(ctx.request.query.day || 0, 'days')
+
+  ctx.render('map', { range: [
+    date.clone().startOf('day').toDate().getTime(),
+    date.clone().endOf('day').toDate().getTime()
+  ], speed: speed });
+})
+
+router.get('/get/geodata', async (ctx, next) => {
+
+  if (ctx.request.query.access_token !== 'my_S3cr37') {
+    const err = new Error('Not authorized')
+    err.status = 401
+    throw err;
+  }
+
+  let {
+    rangeStart = moment().endOf('day').toDate().getTime(),
+    rangeEnd = moment().startOf('day').toDate().getTime()
+  } = ctx.request.query;
+
+  rangeStart = parseInt(rangeStart, 10);
+  rangeEnd = parseInt(rangeEnd, 10);
+
+  rangeStart = moment(rangeStart).isValid() ?
+    moment(rangeStart).toDate() :
+    moment().endOf('day').toDate().getTime();
+  rangeEnd = moment(rangeEnd).isValid() ?
+    moment(rangeEnd).toDate() :
+    moment().startOf('day').toDate().getTime();
+
+  const records = await MyGeoData.find({
+    timestamp: {
+      $gte: rangeStart,
+      $lte: rangeEnd,
+    }
+  }).sort({
+    timestamp: 1
+  }).exec();
+  ctx.body = { success: true, data: records }
+})
+
+router.post('/insert/geodata', async (ctx, next) => {
+
+  if (ctx.request.query.access_token !== 'my_S3cr37') {
+    const err = new Error('Not authorized')
+    err.status = 401
+    throw err;
+  }
+
   let records = ctx.request.body.data;
-  debug(ctx.request.body.data)
 
   if (!records) {
     var err = new Error('No Records');
@@ -50,16 +108,33 @@ router.post('/insert/geodata', async function (ctx, next) {
   }
 
   records = records.map((record) => {
-    record._loc = [record.latitude, record.longitude];
+    record._loc = {
+      type: 'Point',
+      coordinates: [record.longitude, record.latitude]
+    };
     return record;
   })
 
-  let insert = await MyGeoData.create(records);
-  ctx.body = { success: true, createdCount: records.length }
+  try {
+    let insert = await MyGeoData.create(records);
+    ctx.body = { success: true, createdCount: records.length }
+  } catch (err) {
+    console.error(err)
+    throw err;
+  }
+
+})
+
+const pug = new Pug({
+  viewPath: './views',
+  basedir: './extends',
+  debug: false,
+  pretty: false,
+  compileDebug: false,
+  app: app
 })
 
 app.use(koaBody());
-
 app.use(router.routes());
 app.use(router.allowedMethods());
 // Error handling

@@ -1,0 +1,107 @@
+doctype html
+html
+  head
+    meta(name='viewport', content='initial-scale=1.0, user-scalable=no')
+    meta(charset='utf-8')
+    title Simple Polylines
+    style.
+      /* Always set the map height explicitly to define the size of the div
+      * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+  body
+    #map
+    script(src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js')
+    script(async='', defer='', src='https://maps.googleapis.com/maps/api/js?key=AIzaSyB9cfmOZFFPbbNZGzkVQ3i9fdTU6lcNE2s&callback=initMap')
+    script.
+      let map;
+      let path;
+      let mPath;
+      let polyline;
+      let mPolyline;
+      const range = !{JSON.stringify(range)};
+      const speed = #{speed}
+      
+      const rangeInTime = range.map((date) => moment(date).toDate().getTime())
+      
+      const generateLine = (path, color = '#B2EBF2', addIcon, iconName = 'FORWARD_CLOSED_ARROW') => {
+        let option = {
+          path: path,
+          geodesic: true,
+          strokeColor: color,
+          strokeOpacity: 1.0,
+          strokeWeight: 2
+        };
+        
+        if (addIcon) {
+          option.icons = [{
+            icon: {path: google.maps.SymbolPath[iconName]},
+            offset: '100%'
+          }];
+        }
+        
+        return option;
+      }
+      
+      function initMap () {
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 15,
+          center: {lat: 16.853836, lng: 96.166065},
+          mapTypeId: 'roadmap',
+          styles: [ { "elementType": "geometry", "stylers": [ { "color": "#f5f5f5" } ] }, { "elementType": "labels.icon", "stylers": [ { "visibility": "off" } ] }, { "elementType": "labels.text.fill", "stylers": [ { "color": "#616161" } ] }, { "elementType": "labels.text.stroke", "stylers": [ { "color": "#f5f5f5" } ] }, { "featureType": "administrative.land_parcel", "elementType": "labels.text.fill", "stylers": [ { "color": "#bdbdbd" } ] }, { "featureType": "administrative.neighborhood", "stylers": [ { "visibility": "off" } ] }, { "featureType": "poi", "elementType": "geometry", "stylers": [ { "color": "#eeeeee" } ] }, { "featureType": "poi", "elementType": "labels.text", "stylers": [ { "visibility": "off" } ] }, { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [ { "color": "#757575" } ] }, { "featureType": "poi.park", "elementType": "geometry", "stylers": [ { "color": "#e5e5e5" } ] }, { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [ { "color": "#9e9e9e" } ] }, { "featureType": "road", "elementType": "geometry", "stylers": [ { "color": "#ffffff" } ] }, { "featureType": "road", "elementType": "labels", "stylers": [ { "visibility": "off" } ] }, { "featureType": "road.arterial", "elementType": "labels.text.fill", "stylers": [ { "color": "#757575" } ] }, { "featureType": "road.highway", "elementType": "geometry", "stylers": [ { "color": "#dadada" } ] }, { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [ { "color": "#616161" } ] }, { "featureType": "road.local", "elementType": "labels.text.fill", "stylers": [ { "color": "#9e9e9e" } ] }, { "featureType": "transit.line", "elementType": "geometry", "stylers": [ { "color": "#e5e5e5" } ] }, { "featureType": "transit.station", "elementType": "geometry", "stylers": [ { "color": "#eeeeee" } ] }, { "featureType": "water", "elementType": "geometry", "stylers": [ { "color": "#c9c9c9" } ] }, { "featureType": "water", "elementType": "labels.text", "stylers": [ { "visibility": "off" } ] }, { "featureType": "water", "elementType": "labels.text.fill", "stylers": [ { "color": "#9e9e9e" } ] } ]
+        });
+        
+        const url = `/get/geodata?access_token=my_S3cr37&rangeStart=${rangeInTime[0]}&rangeEnd=${rangeInTime[1]}`;
+        
+        fetch(url)
+          .then(resp => resp.json())
+          .then(({data = []}) => {
+            // path = data.map((p) => ({lat: p.coords.latitude, lng: p.coords.longitude}))
+            /*polyline = generateLine(path);*/
+            /*polyline.setMap(map);*/
+            
+            polyline = new google.maps.Polyline(generateLine([]))
+            mPolyline = new google.maps.Polyline(generateLine([]))
+            
+            let firstOne = data[0] ? Date.parse(data[0].timestamp): 0;
+            let previous = firstOne;
+            mPath = [];
+            
+            let timeDiff = [];
+            // Animate
+            data.forEach((path, i) => {
+              let diff = Date.parse(path.timestamp) - firstOne;
+              let aDiff = Date.parse(path.timestamp) - previous;
+              previous = Date.parse(path.timestamp);
+              timeDiff[i] = aDiff;
+              
+              setTimeout(() => {
+                const latlng = {lat: path.coords.latitude, lng: path.coords.longitude};
+                const isMoreThan5Min = timeDiff[i+1] > (5*60*1000);
+                const isMoreThan30Min = timeDiff[i+1] > (30*60*1000);
+                
+                map.panTo(latlng);
+                mPath.push(latlng);
+                polyline.setMap(null);
+                mPolyline.setMap(null);
+
+                polyline = new google.maps.Polyline(
+                  generateLine(mPath.slice(0, -50))
+                );
+                mPolyline = new google.maps.Polyline(
+                  generateLine(mPath.slice(-50), '#00BCD4', true, isMoreThan5Min ? 'CIRCLE': 'FORWARD_CLOSED_ARROW')
+                );
+
+                polyline.setMap(map);
+                mPolyline.setMap(map);
+              }, Math.floor(diff/speed))
+            })
+          })
+      }
