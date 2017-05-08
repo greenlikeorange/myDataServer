@@ -49,14 +49,19 @@ router.get('/show', async (ctx, next) => {
     throw err;
   }
 
-  var speed = ctx.request.query.speed || 5;
-  var skipStops = !!ctx.request.query.skipstops;
-  var date = moment().subtract(ctx.request.query.day || 0, 'days')
+  const {
+    deviceId = null,
+    speed = 5,
+    skipStops = false,
+    day = 0
+  } = ctx.request.query;
+
+  var date = moment().subtract(day, 'days');
 
   ctx.render('map', { range: [
     date.clone().startOf('day').toDate().getTime(),
     date.clone().endOf('day').toDate().getTime()
-  ], speed: speed, skipStops: skipStops });
+  ], deviceId, speed, skipStops, day });
 })
 
 router.get('/get/geodata', async (ctx, next) => {
@@ -69,7 +74,8 @@ router.get('/get/geodata', async (ctx, next) => {
 
   let {
     rangeStart = moment().endOf('day').toDate().getTime(),
-    rangeEnd = moment().startOf('day').toDate().getTime()
+    rangeEnd = moment().startOf('day').toDate().getTime(),
+    deviceId = null
   } = ctx.request.query;
 
   rangeStart = parseInt(rangeStart, 10);
@@ -82,11 +88,13 @@ router.get('/get/geodata', async (ctx, next) => {
     moment(rangeEnd).toDate() :
     moment().startOf('day').toDate().getTime();
 
+
   const records = await MyGeoData.find({
     timestamp: {
       $gte: rangeStart,
       $lte: rangeEnd,
-    }
+    },
+    _device: deviceId
   }).sort({
     timestamp: 1
   }).exec();

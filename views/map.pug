@@ -29,6 +29,7 @@ html
       let stopMaker;
       const range = !{JSON.stringify(range)};
       const speed = #{speed};
+      const deviceId = "#{deviceId}";
       const skipStops = #{skipStops ? 'true': 'false'};
       
       const rangeInTime = range.map((date) => moment(date).toDate().getTime())
@@ -60,15 +61,11 @@ html
           styles: [ { "elementType": "geometry", "stylers": [ { "color": "#f5f5f5" } ] }, { "elementType": "labels.icon", "stylers": [ { "visibility": "off" } ] }, { "elementType": "labels.text.fill", "stylers": [ { "color": "#616161" } ] }, { "elementType": "labels.text.stroke", "stylers": [ { "color": "#f5f5f5" } ] }, { "featureType": "administrative.land_parcel", "elementType": "labels.text.fill", "stylers": [ { "color": "#bdbdbd" } ] }, { "featureType": "administrative.neighborhood", "stylers": [ { "visibility": "off" } ] }, { "featureType": "poi", "elementType": "geometry", "stylers": [ { "color": "#eeeeee" } ] }, { "featureType": "poi", "elementType": "labels.text", "stylers": [ { "visibility": "off" } ] }, { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [ { "color": "#757575" } ] }, { "featureType": "poi.park", "elementType": "geometry", "stylers": [ { "color": "#e5e5e5" } ] }, { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [ { "color": "#9e9e9e" } ] }, { "featureType": "road", "elementType": "geometry", "stylers": [ { "color": "#ffffff" } ] }, { "featureType": "road", "elementType": "labels", "stylers": [ { "visibility": "off" } ] }, { "featureType": "road.arterial", "elementType": "labels.text.fill", "stylers": [ { "color": "#757575" } ] }, { "featureType": "road.highway", "elementType": "geometry", "stylers": [ { "color": "#dadada" } ] }, { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [ { "color": "#616161" } ] }, { "featureType": "road.local", "elementType": "labels.text.fill", "stylers": [ { "color": "#9e9e9e" } ] }, { "featureType": "transit.line", "elementType": "geometry", "stylers": [ { "color": "#e5e5e5" } ] }, { "featureType": "transit.station", "elementType": "geometry", "stylers": [ { "color": "#eeeeee" } ] }, { "featureType": "water", "elementType": "geometry", "stylers": [ { "color": "#c9c9c9" } ] }, { "featureType": "water", "elementType": "labels.text", "stylers": [ { "visibility": "off" } ] }, { "featureType": "water", "elementType": "labels.text.fill", "stylers": [ { "color": "#9e9e9e" } ] } ]
         });
         
-        const url = `/get/geodata?access_token=my_S3cr37&rangeStart=${rangeInTime[0]}&rangeEnd=${rangeInTime[1]}`;
+        const url = `/get/geodata?access_token=my_S3cr37&rangeStart=${rangeInTime[0]}&rangeEnd=${rangeInTime[1]}&deviceId${deviceId}`;
         
         fetch(url)
           .then(resp => resp.json())
           .then(({data = []}) => {
-            // path = data.map((p) => ({lat: p.coords.latitude, lng: p.coords.longitude}))
-            /*polyline = generateLine(path);*/
-            /*polyline.setMap(map);*/
-            
             polyline = new google.maps.Polyline(generateLine([]))
             mPolyline = new google.maps.Polyline(generateLine([]))
             
@@ -83,38 +80,38 @@ html
               let aDiff = Date.parse(path.timestamp) - previous;
               previous = Date.parse(path.timestamp);
               timeDiff[i] = aDiff;
-              
-              setTimeout(() => {
-                const latlng = {lat: path.coords.latitude, lng: path.coords.longitude};
-                map.panTo(latlng);
-                mPath.push(latlng);
-                
-                polyline.setMap(null);
-                mPolyline.setMap(null);
-                
-                const isMoreThan5Min = timeDiff[i+1] > (5*60*1000);
-                const isMoreThan30Min = timeDiff[i+1] > (30*60*1000);
-
-                polyline = new google.maps.Polyline(
-                  generateLine(mPath.slice(0, -50))
-                );
-                mPolyline = new google.maps.Polyline(
-                  generateLine(mPath.slice(-50), '#00BCD4', true, isMoreThan5Min ? 'CIRCLE': 'FORWARD_CLOSED_ARROW')
-                );
-                
-                if (stopMaker) stopMaker.setMap(null);
-                
-                if (isMoreThan5Min) {
-                  stopMaker = new google.maps.Marker({
-                    position: latlng,
-                    label: Math.floor(timeDiff[i+1]/(60*1000)) + 'm',
-                    map: map
-                  });
-                }
-
-                polyline.setMap(map);
-                mPolyline.setMap(map);
-              }, Math.floor(diff/speed))
             })
+            
+            setTimeout(() => {
+              const latlng = {lat: path.coords.latitude, lng: path.coords.longitude};
+              map.panTo(latlng);
+              mPath.push(latlng);
+              
+              polyline.setMap(null);
+              mPolyline.setMap(null);
+              
+              const isMoreThan5Min = timeDiff[i+1] > (5*60*1000);
+              const isMoreThan30Min = timeDiff[i+1] > (30*60*1000);
+
+              polyline = new google.maps.Polyline(
+                generateLine(mPath.slice(0, -50))
+              );
+              mPolyline = new google.maps.Polyline(
+                generateLine(mPath.slice(-50), '#00BCD4', true, isMoreThan5Min ? 'CIRCLE': 'FORWARD_CLOSED_ARROW')
+              );
+              
+              if (stopMaker) stopMaker.setMap(null);
+              
+              if (isMoreThan5Min) {
+                stopMaker = new google.maps.Marker({
+                  position: latlng,
+                  label: Math.floor(timeDiff[i+1]/(60*1000)) + 'm',
+                  map: map
+                });
+              }
+
+              polyline.setMap(map);
+              mPolyline.setMap(map);
+            }, Math.floor(diff/speed))
           })
       }
