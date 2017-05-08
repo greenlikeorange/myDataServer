@@ -109,9 +109,9 @@ router.post('/insert/geodata', async (ctx, next) => {
   }
 
   records = records.map((record) => {
-    record._loc = {
+    record.sudo  = {
       type: 'Point',
-      coordinates: [record.longitude, record.latitude]
+      coordinates: [record.coords.longitude, record.coords.latitude]
     };
     return record;
   })
