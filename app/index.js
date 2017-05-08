@@ -18,6 +18,7 @@ mongoose.Promise = global.Promise;
 
 const Schema = mongoose.Schema;
 const MyGeoDataSchema = new Schema({
+  _device: { type: String },
   _loc: {
     type: { type: String, default: 'Point'},
     coordinates: [Number]
@@ -100,6 +101,7 @@ router.post('/insert/geodata', async (ctx, next) => {
     throw err;
   }
 
+  let device = ctx.request.body.deviceInfo;
   let records = ctx.request.body.data;
 
   if (!records) {
@@ -109,12 +111,18 @@ router.post('/insert/geodata', async (ctx, next) => {
   }
 
   records = records.map((record) => {
+    record._device = device.uniqueID;
     record._loc  = {
       type: 'Point',
       coordinates: [record.coords.longitude, record.coords.latitude]
     };
     return record;
   })
+
+  if (records.length === 0) {
+    ctx.body = { success: true, createdCount: records.length }
+    return;
+  }
 
   try {
     let insert = await MyGeoData.create(records);
@@ -123,7 +131,6 @@ router.post('/insert/geodata', async (ctx, next) => {
     console.error(err)
     throw err;
   }
-
 })
 
 const pug = new Pug({

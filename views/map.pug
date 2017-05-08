@@ -107,7 +107,7 @@ html
                 if (isMoreThan5Min) {
                   stopMaker = new google.maps.Marker({
                     position: latlng,
-                    label: Math.floor(diff/(60*1000)) + 'm',
+                    label: Math.floor(timeDiff[i+1]/(60*1000)) + 'm',
                     map: map
                   });
                 }
